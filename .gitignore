@@ -1,5 +1,6 @@
 #Folders
-dataset/*
+yolov8/dataset/*
+raw_data/*
 
 # VSCode
 .vscode/*
