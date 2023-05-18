@@ -11,6 +11,7 @@ from PIL import ImageEnhance, ImageOps, ImageFilter
 object_classes_dict = dict()
 object_classes_dict["noodlecup"] = 0
 object_classes_dict["currycup"] = 1
+object_classes_dict["seafoodcup"] = 2
 
 background_images_path = "raw_data/background_samples/"
 #get list of all images
@@ -149,6 +150,12 @@ if __name__ == "__main__":
                 # Get the alpha channel as a separate image
                 alpha = object_image.getchannel("A")
 
+                # Cleaning: set all alpha values that are lower than 100 to 0, keep all the others
+                alpha = alpha.point(lambda i: 0 if i<100 else i)
+
+                # Set the alpha channel of the object image to the new alpha channel
+                object_image.putalpha(alpha)
+
                 # Find the non-transparent regions of the image
                 bbox = alpha.getbbox()
 
@@ -177,7 +184,7 @@ if __name__ == "__main__":
                     print("Warning: background image is too small")
 
                 # Resize the object image with a random size
-                scale = random.uniform(0.15, 0.8)
+                scale = random.uniform(0.05, 0.8)
                 if object_image.size[0] > background_size[0] or object_image.size[1] > background_size[1]:
                     scale = scale * min((background_size[0] / object_image.size[0]), (background_size[1] / object_image.size[1])) #ensure object is not bigger than background
                 new_size = (int(object_image.size[0] * scale), int(object_image.size[1] * scale))

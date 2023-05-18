@@ -9,6 +9,8 @@ import message_filters
 
 classesDict = dict()
 classesDict[0] = 'CupNoodles'
+classesDict[1] = 'CurryCup'
+classesDict[2] = 'SeaFoodCup'
 
 
 
@@ -136,6 +138,8 @@ def process_images(time):
             rospy.loginfo('Object detected: {}'.format(objectClass))
             rospy.loginfo('Confidence: {}'.format(confidence))
             rospy.loginfo('Pose: {}'.format(pose))
+            #wait 1s
+            rospy.sleep(5)
         #kill node
         rospy.signal_shutdown('All objects detected have been processed')
 
