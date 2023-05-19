@@ -3,6 +3,7 @@ import rospy
 from cv_bridge import CvBridge, CvBridgeError
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Image, CameraInfo
+from std_msgs.msg import Bool
 import numpy as np
 import tf
 import message_filters
@@ -30,6 +31,7 @@ depth_data = None
 camera_info = dict()
 model = YOLO('trained_models/best.pt')
 pub_dict = dict()
+pub_end = rospy.Publisher("/end_of_detection", Bool, queue_size=1)
 
 def rgb_callback(data):
     global rgb_data
@@ -68,7 +70,7 @@ def camera_info_callback(data):
     camera_info['cy'] = data.K[5]
 
 def process_images(time):
-    global rgb_data, depth_data, camera_info, pub_dict
+    global rgb_data, depth_data, camera_info, pub_dict, pub_end
     
     if rgb_data is not None and depth_data is not None and camera_info:
         #inference
@@ -138,8 +140,8 @@ def process_images(time):
             rospy.loginfo('Object detected: {}'.format(objectClass))
             rospy.loginfo('Confidence: {}'.format(confidence))
             rospy.loginfo('Pose: {}'.format(pose))
-            #wait 1s
-            rospy.sleep(5)
+        #send end of detection signal
+        pub_end.publish(True)
         #kill node
         rospy.signal_shutdown('All objects detected have been processed')
 
@@ -163,6 +165,7 @@ def listener():
         output_topic = output_topic_prefix + objectClass
         pub = rospy.Publisher(output_topic, PoseStamped, queue_size=10)
         pub_dict[objectClass_id] = pub
+
     # run the node
     rospy.spin()
 
