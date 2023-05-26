@@ -1,6 +1,7 @@
 #Folders
 yolov8/dataset/*
 raw_data/*
+linemod/*
 
 # VSCode
 .vscode/*

@@ -1,0 +1,6 @@
+train: custom_dataset/train/images
+val: custom_dataset/valid/images
+test: custom_dataset/test/images
+
+nc: 15
+names: ['000001', '000002', '000003', '000004', '000005', '000006', '000007', '000008', '000009', '000010', '000011', '000012', '000013', '000014', '000015']

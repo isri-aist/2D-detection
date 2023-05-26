@@ -107,6 +107,7 @@ def generate_yolov8_dataset(background_image, x_center, y_center, bb_width, bb_h
 def add_random_object(background_image):
     random_object_image = Image.open(random_object_images_path + random.choice(random_object_images_list)).convert("RGBA")
     #scale the object between 2 and 30% of the background image
+    background_size = background_image.size
     alpha = random_object_image.split()[3]
     bbox = alpha.getbbox()
     random_object_image = random_object_image.crop(bbox)
