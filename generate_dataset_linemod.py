@@ -7,6 +7,7 @@ import os
 import sys
 from tqdm import tqdm
 from PIL import ImageEnhance, ImageOps, ImageFilter
+import string
 
 object_classes_dict = dict()
 object_classes_dict["000001"] = 0
@@ -38,43 +39,6 @@ objects_list_path = "linemod/lm_train/train/"
 objects_list = os.listdir(objects_list_path)
 
 dataset_path = "yolov8/linemod_dataset/custom_dataset/"
-
-def generate_yolov8_dataset(background_image, x_center, y_center, bb_width, bb_height, object_rotation_rad, image_name, object_name):
-    #generate a dataset for YOLOv8
-    #Bounding box is anchor free
-    #Bounding box format: class, x_center, y_center, width, height
-    #class is the class of the object (int)
-    #x_center, y_center are the coordinates of the center of the bounding box
-    #width, height are the width and height of the bounding box
-    
-    dataset_path = "yolov8/linemod_dataset/custom_dataset/"
-
-    class_id = object_classes_dict[object_name]
-
-    x_center = x_center / background_image.width
-    y_center = y_center / background_image.height
-
-    bb_width = bb_width / background_image.width
-    bb_height = bb_height / background_image.height
-
-
-    # Save the resulting image
-    random_number = random.uniform(0, 1)
-    if random_number < 0.8:
-        background_image.save(dataset_path+"train/images/" + image_name + str(object_rotation_rad) + ".jpg")
-        #write label file
-        with open(dataset_path+"train/labels/" + image_name + str(object_rotation_rad) + ".txt", "w") as f:
-            f.write(str(class_id) + " " + str(x_center) + " " + str(y_center) + " " + str(bb_width) + " " + str(bb_height))
-    elif random_number < 0.9:
-        background_image.save(dataset_path+"valid/images/" + image_name + str(object_rotation_rad) + ".jpg")
-        #write label file
-        with open(dataset_path+"valid/labels/" + image_name + str(object_rotation_rad) + ".txt", "w") as f:
-            f.write(str(class_id) + " " + str(x_center) + " " + str(y_center) + " " + str(bb_width) + " " + str(bb_height))
-    else:
-        background_image.save(dataset_path+"test/images/" + image_name + str(object_rotation_rad) + ".jpg")
-        #write label file
-        with open(dataset_path+"test/labels/" + image_name + str(object_rotation_rad) + ".txt", "w") as f:
-            f.write(str(class_id) + " " + str(x_center) + " " + str(y_center) + " " + str(bb_width) + " " + str(bb_height))
 
 
 def add_random_object(background_image):
@@ -250,7 +214,6 @@ if __name__ == "__main__":
                     save_path = "test/"
                 # Save the resulting image
                 #random id with letters and numbers
-                import string
                 random_id = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(5))
                 background_image.save(dataset_path+save_path+"images/" + object_name + image_name[:-3] + "_" + random_id + ".jpg")
                 #write label file
@@ -260,14 +223,11 @@ if __name__ == "__main__":
 
 
                 #             #show image with bounding box
-                import matplotlib.pyplot as plt
-                import matplotlib.patches as patches
-                fig, ax = plt.subplots(1)
-                ax.imshow(background_image)
-                for m in range(len(x_center_list)):
-                    rect = patches.Rectangle((x_center_list[m]*background_image.width - bb_width_list[m]*background_image.width/2, y_center_list[m]*background_image.height - bb_height_list[m]*background_image.height/2), bb_width_list[m]*background_image.width, bb_height_list[m]*background_image.height, linewidth=1, edgecolor='r', facecolor='none')
-                    ax.add_patch(rect)
-                plt.show()
-                exit()
-
-                generate_yolov8_dataset(background_image, x_center, y_center, new_width, new_height, object_rotation_rad, image_name, objects_list[k])
+                # import matplotlib.pyplot as plt
+                # import matplotlib.patches as patches
+                # fig, ax = plt.subplots(1)
+                # ax.imshow(background_image)
+                # for m in range(len(x_center_list)):
+                #     rect = patches.Rectangle((x_center_list[m]*background_image.width - bb_width_list[m]*background_image.width/2, y_center_list[m]*background_image.height - bb_height_list[m]*background_image.height/2), bb_width_list[m]*background_image.width, bb_height_list[m]*background_image.height, linewidth=1, edgecolor='r', facecolor='none')
+                #     ax.add_patch(rect)
+                # plt.show()
