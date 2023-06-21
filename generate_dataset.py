@@ -16,55 +16,19 @@ object_classes_dict["seafoodcup"] = 2
 background_images_path = "raw_data/background_samples/"
 #get list of all images
 background_images_list = os.listdir(background_images_path)
+background_images_list = [x for x in background_images_list if x.endswith(".png") or x.endswith(".jpg") or x.endswith(".jpeg")]
 
 random_object_images_path = "raw_data/random_objects/"
 #get list of all images
 random_object_images_list = os.listdir(random_object_images_path)
+random_object_images_list = [x for x in random_object_images_list if x.endswith(".png") or x.endswith(".jpg") or x.endswith(".jpeg")]
 
 objects_list_path = "raw_data/objects_to_detect/"
-#get list of all objects
+#get list of all objects, keep only directories
 objects_list = os.listdir(objects_list_path)
+objects_list = [x for x in objects_list if os.path.isdir(objects_list_path + x)]
 
-def generate_yolov5OBB_dataset(background_image, x_center, y_center, object_width, object_height, object_rotation_rad, image_name, object_name):
-    #generate a dataset for YOLOv5OBB
-    #Bounding box is oriented
-    #Bounding box format: x1, y1, x2, y2, x3, y3, x4, y4, class, difficulty
-    #x1, y1, x2, y2, x3, y3, x4, y4 are the coordinates of the bounding box vertices in clockwise order from top left
-    #class is the class of the object (string)
-    #difficulty is the difficulty of the object (0 for easy, 1 for hard)
-    dataset_path = "yolov5_obb/dataset/custom_dataset/"
-
-    class_id = object_classes_dict[object_name]
-
-    object_rotation_rad = -object_rotation_rad
-    x4, y4 = x_center - (object_width / 2)*np.cos(object_rotation_rad) - (object_height / 2)*np.sin(object_rotation_rad), y_center - (object_width / 2)*np.sin(object_rotation_rad) + (object_height / 2)*np.cos(object_rotation_rad)
-    x3, y3 = x_center + (object_width / 2)*np.cos(object_rotation_rad) - (object_height / 2)*np.sin(object_rotation_rad), y_center + (object_width / 2)*np.sin(object_rotation_rad) + (object_height / 2)*np.cos(object_rotation_rad)
-    x2, y2 = x_center + (object_width / 2)*np.cos(object_rotation_rad) + (object_height / 2)*np.sin(object_rotation_rad), y_center + (object_width / 2)*np.sin(object_rotation_rad) - (object_height / 2)*np.cos(object_rotation_rad)
-    x1, y1 = x_center - (object_width / 2)*np.cos(object_rotation_rad) + (object_height / 2)*np.sin(object_rotation_rad), y_center - (object_width / 2)*np.sin(object_rotation_rad) - (object_height / 2)*np.cos(object_rotation_rad)
-
-    x1, y1 = int(x1), int(y1)
-    x2, y2 = int(x2), int(y2)
-    x3, y3 = int(x3), int(y3)
-    x4, y4 = int(x4), int(y4)
-
-    # Save the resulting image
-    random_number = random.uniform(0, 1)
-    if random_number < 0.8:
-        background_image.save(dataset_path+"train/images/" + image_name + str(object_rotation_rad) + ".jpg")
-        #write label file
-        with open(dataset_path+"train/labelTxt/" + image_name + str(object_rotation_rad) + ".txt", "w") as f:
-            f.write(str(x1) + " " + str(y1) + " " + str(x2) + " " + str(y2) + " " + str(x3) + " " + str(y3) + " " + str(x4) + " " + str(y4) + " " + object_name + " " + str(class_id))
-    elif random_number < 0.9:
-        background_image.save(dataset_path+"valid/images/" + image_name + str(object_rotation_rad) + ".jpg")
-        #write label file
-        with open(dataset_path+"valid/labelTxt/" + image_name + str(object_rotation_rad) + ".txt", "w") as f:
-            f.write(str(x1) + " " + str(y1) + " " + str(x2) + " " + str(y2) + " " + str(x3) + " " + str(y3) + " " + str(x4) + " " + str(y4) + " " + object_name + " " + str(class_id))
-    else:
-        background_image.save(dataset_path+"test/images/" + image_name + str(object_rotation_rad) + ".jpg")
-        #write label file
-        with open(dataset_path+"test/labelTxt/" + image_name + str(object_rotation_rad) + ".txt", "w") as f:
-            f.write(str(x1) + " " + str(y1) + " " + str(x2) + " " + str(y2) + " " + str(x3) + " " + str(y3) + " " + str(x4) + " " + str(y4) + " " + object_name + " " + str(class_id))
-
+dataset_path = "yolov8/dataset/custom_dataset/"
 
 def generate_yolov8_dataset(background_image, x_center, y_center, bb_width, bb_height, object_rotation_rad, image_name, object_name):
     #generate a dataset for YOLOv8
@@ -74,8 +38,6 @@ def generate_yolov8_dataset(background_image, x_center, y_center, bb_width, bb_h
     #x_center, y_center are the coordinates of the center of the bounding box
     #width, height are the width and height of the bounding box
     
-    dataset_path = "yolov8/dataset/custom_dataset/"
-
     class_id = object_classes_dict[object_name]
 
     x_center = x_center / background_image.width
@@ -131,15 +93,12 @@ def add_random_object(background_image):
 
 #main
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python generate_dataset.py <datasetFormat>")
-        print("datasetFormat: yolov5OBB, yolov8")
-        sys.exit(1)
-    datasetFormat = sys.argv[1]
 
     for k in tqdm(range(len(objects_list))):
         raw_object_images_path = objects_list_path + objects_list[k] + "/"
+        #load all images, ignore non-image files
         object_images_list = os.listdir(raw_object_images_path)
+        object_images_list = [x for x in object_images_list if x.endswith(".png") or x.endswith(".jpg") or x.endswith(".jpeg")]
     
         for i in tqdm(range(len(object_images_list))):
             image_name = object_images_list[i]
@@ -243,14 +202,7 @@ if __name__ == "__main__":
                 x_center = object_position[0] + new_width / 2
                 y_center = object_position[1] + new_height / 2
 
-                #             #show image
-                # background_image.show()
 
-                # exit()
-
-                if datasetFormat == "yolov5OBB":
-                    generate_yolov5OBB_dataset(background_image, x_center, y_center, width, height, object_rotation_rad, image_name, objects_list[k])
-                elif datasetFormat == "yolov8":
-                    generate_yolov8_dataset(background_image, x_center, y_center, new_width, new_height, object_rotation_rad, image_name, objects_list[k])
+                generate_yolov8_dataset(background_image, x_center, y_center, new_width, new_height, object_rotation_rad, image_name, objects_list[k])
 
                 object_rotation_rad = random.uniform(0, 2*np.pi)
