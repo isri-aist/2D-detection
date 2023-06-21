@@ -2,7 +2,7 @@
 
 ![Demo img](demo_img.jpg)
 
-This repo allows the detection of targeted objects on a camera stream, in combination with the 6D-pose-estimation repo. It also contains the code for synthetic dataset generation and training of the detection network.
+This repo allows the detection of targeted objects on a camera stream, in combination with the [6D-pose-estimation](https://github.com/isri-aist/6D-pose-estimation) repo. It also contains the code for synthetic dataset generation and training of the detection network.
 
 ## Features
 
