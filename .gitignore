@@ -2,11 +2,18 @@
 yolov8/dataset/*
 !yolov8/dataset/empty_custom_dataset
 yolov8/linemod_dataset/*
-raw_data/*
+raw_data/**/*.jpeg
+raw_data/**/*.png
+raw_data/**/*.jpg
+
+!raw_data/**/*.gitkeep
 linemod/*
 linemod-occluded/*
 icmi/*
 ruapc/*
+
+#Keep .gitkeep files
+!raw_data/objects_to_detect/currycup/.gitkeep
 
 # VSCode
 .vscode/*
