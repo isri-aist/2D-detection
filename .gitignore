@@ -3,6 +3,8 @@ yolov8/dataset/*
 yolov8/linemod_dataset/*
 raw_data/*
 linemod/*
+linemod-occluded/*
+icmi/*
 
 # VSCode
 .vscode/*

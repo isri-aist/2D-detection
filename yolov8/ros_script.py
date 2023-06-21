@@ -3,7 +3,7 @@ import rospy
 from cv_bridge import CvBridge, CvBridgeError
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Image, CameraInfo
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 import numpy as np
 import tf
 import message_filters
@@ -31,7 +31,7 @@ depth_data = None
 camera_info = dict()
 model = YOLO('trained_models/best.pt')
 pub_dict = dict()
-pub_end = rospy.Publisher("/end_of_detection", Bool, queue_size=1)
+pub_end = rospy.Publisher("/end_of_detection", String, queue_size=1)
 
 def rgb_callback(data):
     global rgb_data
@@ -48,7 +48,7 @@ def depth_callback(data):
     except CvBridgeError as e:
         print(e)
 
-def sync_callback(rgb_msg, depth_msg):
+def sync_callback(rgb_msg, depth_msg, command_msg):
     global rgb_data, depth_data
     try:
         rgb_data = bridge.imgmsg_to_cv2(rgb_msg, "bgr8")
@@ -76,6 +76,8 @@ def process_images(time):
         #inference
         results = model(rgb_data, stream=True).__next__().boxes
 
+        detected_objects_txt = ''
+
         #check if there is at least one object detected
         for i in range(len(results.boxes)):
             objectClass_id = int(results.cls[i].item())
@@ -84,6 +86,7 @@ def process_images(time):
             if objectClass is None:
                 print('Warning: object class not found in the dictionary. Check that the model was trained with the same classes as the dictionary.')
                 continue
+            detected_objects_txt += objectClass + ' '
             confidence = results.conf[i].item()
             #if confidence is too low, skip
             if confidence < 0.3:
@@ -96,6 +99,20 @@ def process_images(time):
             h = xywh[3]
 
             z = depth_data[y][x]
+
+            k_search = 0
+            while z == 0 and k_search < min(w//2, h//2):
+                k_search += 1
+                for i in range(-k_search, k_search):
+                    for j in range(-k_search, k_search):
+                        try:
+                            z = depth_data[y+i][x+j]
+                        except:
+                            z = 0
+                        if z != 0:
+                            break
+                    if z != 0:
+                        break
 
             # 3D coordinates of the object center
             X = (x - camera_info['cx']) * z / camera_info['fx']
@@ -141,9 +158,9 @@ def process_images(time):
             rospy.loginfo('Confidence: {}'.format(confidence))
             rospy.loginfo('Pose: {}'.format(pose))
         #send end of detection signal
-        pub_end.publish(True)
+        pub_end.publish(detected_objects_txt)
         #kill node
-        rospy.signal_shutdown('All objects detected have been processed')
+        #rospy.signal_shutdown('All objects detected have been processed')
 
 
 def listener():
@@ -155,7 +172,8 @@ def listener():
     sub_rgb = message_filters.Subscriber(rgb_image_topic, Image)
     sub_depth = message_filters.Subscriber(depth_image_topic, Image)
     sub_camera_info = rospy.Subscriber(camera_info_topic, CameraInfo, camera_info_callback)
-    combined_sub = message_filters.ApproximateTimeSynchronizer([sub_rgb, sub_depth], 10, 0.1)
+    sub_command = message_filters.Subscriber("/start_detection_command", Bool)
+    combined_sub = message_filters.ApproximateTimeSynchronizer([sub_rgb, sub_depth, sub_command], 1, 0.1, allow_headerless=True)
 
     combined_sub.registerCallback(sync_callback)
 
@@ -163,11 +181,13 @@ def listener():
     for objectClass_id in classesDict:
         objectClass = classesDict[objectClass_id]
         output_topic = output_topic_prefix + objectClass
-        pub = rospy.Publisher(output_topic, PoseStamped, queue_size=10)
+        pub = rospy.Publisher(output_topic, PoseStamped, queue_size=1)
         pub_dict[objectClass_id] = pub
 
-    # run the node
+    # spin 
     rospy.spin()
+
+    
 
 if __name__ == '__main__':
     listener()
