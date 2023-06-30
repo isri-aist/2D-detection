@@ -3,7 +3,7 @@ import rospy
 from cv_bridge import CvBridge, CvBridgeError
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Image, CameraInfo
-from std_msgs.msg import Bool, String
+from std_msgs.msg import Bool, String, Float64
 import numpy as np
 import tf
 import message_filters
@@ -32,6 +32,8 @@ camera_info = dict()
 model = YOLO('trained_models/best.pt')
 pub_dict = dict()
 pub_end = rospy.Publisher("/end_of_detection", String, queue_size=1)
+
+pub_detection_time = rospy.Publisher("/detection_time", Float64, queue_size=1)
 
 def rgb_callback(data):
     global rgb_data
@@ -73,8 +75,16 @@ def process_images(time):
     global rgb_data, depth_data, camera_info, pub_dict, pub_end
     
     if rgb_data is not None and depth_data is not None and camera_info:
+        #time
+        start = rospy.Time.now()
         #inference
         results = model(rgb_data, stream=True).__next__().boxes
+
+        #end time
+        end = rospy.Time.now()
+        duration = end - start
+        rospy.loginfo('Inference time (s): {}'.format(duration.to_sec()))
+        pub_detection_time.publish(duration.to_sec())
 
         detected_objects_txt = ''
 
