@@ -113,6 +113,8 @@ dependencies:
       - tensorboard-data-server==0.7.0
       - tensorboard-plugin-wit==1.8.1
       - thop==0.1.1-2209072238
+      - transforms3d
+      - transformations
       - tomli==2.0.1
       - torch==2.0.0
       - torchaudio==2.0.1

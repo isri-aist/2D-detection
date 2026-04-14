@@ -5,7 +5,8 @@ from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Bool, String, Float64
 import numpy as np
-import tf2_ros
+#import tf2_ros
+import tf_transformations
 import message_filters
 
 classesDict = dict()
@@ -14,13 +15,13 @@ classesDict[1] = 'CurryCup'
 classesDict[2] = 'SeaFoodCup'
 
 
-
-rgb_image_topic = '/head_camera/rgb/image_rect_color'
-depth_image_topic = '/head_camera/depth/image_raw'
-camera_info_topic = '/head_camera/depth/camera_info'
-# rgb_image_topic = '/rgb/image_raw'
-# depth_image_topic = '/depth/image_raw'
-# camera_info_topic = '/depth/camera_info'
+## Fetch head camera
+#rgb_image_topic = '/head_camera/rgb/image_rect_color'
+#depth_image_topic = '/head_camera/depth/image_raw'
+#camera_info_topic = '/head_camera/depth/camera_info'
+rgb_image_topic = '/rgb/image_raw'
+depth_image_topic = '/depth_to_rgb/image_raw'
+camera_info_topic = '/rgb/camera_info'
 
 
 output_topic_prefix = '/object_pose_initialization/'
@@ -31,7 +32,9 @@ depth_data = None
 camera_info = dict()
 model = YOLO('trained_models/best.pt')
 pub_dict = dict()
+pub_detection_time = None
 node = None
+pub_end = None
 
 def rgb_callback(data):
     global rgb_data
@@ -64,25 +67,27 @@ def sync_callback(rgb_msg, depth_msg, command_msg):
 
 def camera_info_callback(data):
     global camera_info
-    camera_info['fx'] = data.K[0]
-    camera_info['fy'] = data.K[4]
-    camera_info['cx'] = data.K[2]
-    camera_info['cy'] = data.K[5]
+    camera_info['fx'] = data.k[0]
+    camera_info['fy'] = data.k[4]
+    camera_info['cx'] = data.k[2]
+    camera_info['cy'] = data.k[5]
 
 def process_images(time):
-    global rgb_data, depth_data, camera_info, pub_dict, pub_end, node
+    global rgb_data, depth_data, camera_info, pub_dict, pub_end, node, pub_detection_time
     
     if rgb_data is not None and depth_data is not None and camera_info:
         #time
-        start = rclpy.Time.now()
+        start = node.get_clock().now()
         #inference
         results = model(rgb_data, stream=True).__next__().boxes
 
         #end time
-        end = rclpy.Time.now()
+        end = node.get_clock().now()
         duration = end - start
-        node.loginfo('Inference time (s): {}'.format(duration.to_sec()))
-        pub_detection_time.publish(duration.to_sec())
+        node.get_logger().info('Inference time (s): %f' % (duration.nanoseconds / 1.0e9))
+        msg = Float64()
+        msg.data = duration.nanoseconds / 1e9
+        pub_detection_time.publish(msg)
 
         detected_objects_txt = ''
 
@@ -125,6 +130,14 @@ def process_images(time):
             # 3D coordinates of the object center
             X = (x - camera_info['cx']) * z / camera_info['fx']
             Y = (y - camera_info['cy']) * z / camera_info['fy']
+            node.get_logger().info(f'position: u={x:.2f} pix, v={y:.2f} pix')
+            fx = camera_info['fx']
+            fy = camera_info['fy']
+            cx = camera_info['cx']
+            cy = camera_info['cy']
+            node.get_logger().info(f'k: fx={fx:.2f} pix, fy={fy:.2f} pix')
+            node.get_logger().info(f'k: cx={cx:.2f} pix, cy={cy:.2f} pix')
+            node.get_logger().info(f'position: X={X:.2f} mm, Y={Y:.2f} mm, Z={z:.2f} mm')
             Z = z + 45 #object has 4.5 cm radius
 
             initial = np.array([0, 0, 1]) #default orientation of the object
@@ -146,7 +159,7 @@ def process_images(time):
                 angle = np.arccos(np.dot(initial, direction) / (np.linalg.norm(initial) * np.linalg.norm(direction)))
 
                 # Compute the rotation as a quaternion
-                quat = tf.transformations.quaternion_about_axis(angle, axis)
+                quat = tf_transformations.quaternion_about_axis(angle, axis)
 
             # publish the result to the output topic
             pose = PoseStamped()
@@ -162,11 +175,15 @@ def process_images(time):
             pose.pose.orientation.w = quat[3]
             pub = pub_dict[objectClass_id]
             pub.publish(pose)
-            node.loginfo('Object detected: {}'.format(objectClass))
-            node.loginfo('Confidence: {}'.format(confidence))
-            node.loginfo('Pose: {}'.format(pose))
+            node.get_logger().info('Object detected: %s' % objectClass)
+            node.get_logger().info('Confidence: %f' % confidence)
+            node.get_logger().info(f'Pose: x={pose.pose.position.x:.2f}, y={pose.pose.position.y:.2f}, z={pose.pose.position.z:.2f}')
+
         #send end of detection signal
-        pub_end.publish(detected_objects_txt)
+        msg_str = String()
+        msg_str.data = detected_objects_txt
+        pub_end.publish(msg_str)
+        
         #kill node
         #rclpy.signal_shutdown('All objects detected have been processed')
 
@@ -174,6 +191,8 @@ def process_images(time):
 def listener():
     global pub_dict
     global node
+    global pub_detection_time
+    global pub_end
     # initialize the node
     rclpy.init()
     node = rclpy.create_node('RGB_detection')

@@ -1,16 +1,19 @@
-import rospy
+import rclpy
 from std_msgs.msg import Bool
 import tkinter as tk
 
 def callback(pub):
-    pub.publish(True)
+    msg = Bool()
+    msg.data = True
+    pub.publish(msg)
 
 def keyboard_input_publisher():
     # Initialize the ROS node
-    rospy.init_node('command_node', anonymous=True)
+    rclpy.init()
+    node = rclpy.create_node('command_node') #, anonymous=True)
     
     # Create a publisher with topic '/keyboard_input' and message type 'Bool'
-    pub = rospy.Publisher('/start_detection_command', Bool, queue_size=1)
+    pub = node.create_publisher(Bool, '/start_detection_command', 1)
     
     # create root window
     root = tk.Tk()
@@ -42,5 +45,5 @@ def keyboard_input_publisher():
 if __name__ == '__main__':
     try:
         keyboard_input_publisher()
-    except rospy.ROSInterruptException:
+    except rclpy.ROSInterruptException:
         pass
