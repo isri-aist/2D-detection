@@ -1,25 +1,26 @@
 name: yolo
 channels:
   - defaults
+  - conda-forge
 dependencies:
   - _libgcc_mutex=0.1=main
   - _openmp_mutex=5.1=1_gnu
   - ca-certificates=2023.01.10=h06a4308_0
-  - certifi=2022.12.7=py39h06a4308_0
+  - certifi
   - ld_impl_linux-64=2.38=h1181459_1
-  - libffi=3.3=he6710b0_2
+  - libffi
   - libgcc-ng=11.2.0=h1234567_1
   - libgomp=11.2.0=h1234567_1
-  - libstdcxx-ng=11.2.0=h1234567_1
-  - ncurses=6.4=h6a678d5_0
-  - openssl=1.1.1t=h7f8727e_0
-  - pip=23.0.1=py39h06a4308_0
-  - python=3.9.15=haa1d7c7_0
+  - libstdcxx-ng=12
+  - ncurses
+  - openssl
+  - pip
+  - python=3.10
   - readline=8.2=h5eee18b_0
-  - setuptools=65.6.3=py39h06a4308_0
+  - setuptools<82
   - sqlite=3.41.1=h5eee18b_0
   - tk=8.6.12=h1ccaba5_0
-  - wheel=0.38.4=py39h06a4308_0
+  - wheel
   - xz=5.2.10=h5eee18b_1
   - zlib=1.2.13=h5eee18b_0
   - pip:

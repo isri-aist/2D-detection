@@ -1,11 +1,11 @@
 from ultralytics import YOLO
-import rospy
+import rclpy
 from cv_bridge import CvBridge, CvBridgeError
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Bool, String, Float64
 import numpy as np
-import tf
+import tf2_ros
 import message_filters
 
 classesDict = dict()
@@ -31,9 +31,7 @@ depth_data = None
 camera_info = dict()
 model = YOLO('trained_models/best.pt')
 pub_dict = dict()
-pub_end = rospy.Publisher("/end_of_detection", String, queue_size=1)
-
-pub_detection_time = rospy.Publisher("/detection_time", Float64, queue_size=1)
+node = None
 
 def rgb_callback(data):
     global rgb_data
@@ -72,18 +70,18 @@ def camera_info_callback(data):
     camera_info['cy'] = data.K[5]
 
 def process_images(time):
-    global rgb_data, depth_data, camera_info, pub_dict, pub_end
+    global rgb_data, depth_data, camera_info, pub_dict, pub_end, node
     
     if rgb_data is not None and depth_data is not None and camera_info:
         #time
-        start = rospy.Time.now()
+        start = rclpy.Time.now()
         #inference
         results = model(rgb_data, stream=True).__next__().boxes
 
         #end time
-        end = rospy.Time.now()
+        end = rclpy.Time.now()
         duration = end - start
-        rospy.loginfo('Inference time (s): {}'.format(duration.to_sec()))
+        node.loginfo('Inference time (s): {}'.format(duration.to_sec()))
         pub_detection_time.publish(duration.to_sec())
 
         detected_objects_txt = ''
@@ -164,25 +162,31 @@ def process_images(time):
             pose.pose.orientation.w = quat[3]
             pub = pub_dict[objectClass_id]
             pub.publish(pose)
-            rospy.loginfo('Object detected: {}'.format(objectClass))
-            rospy.loginfo('Confidence: {}'.format(confidence))
-            rospy.loginfo('Pose: {}'.format(pose))
+            node.loginfo('Object detected: {}'.format(objectClass))
+            node.loginfo('Confidence: {}'.format(confidence))
+            node.loginfo('Pose: {}'.format(pose))
         #send end of detection signal
         pub_end.publish(detected_objects_txt)
         #kill node
-        #rospy.signal_shutdown('All objects detected have been processed')
+        #rclpy.signal_shutdown('All objects detected have been processed')
 
 
 def listener():
     global pub_dict
+    global node
     # initialize the node
-    rospy.init_node('RGB_detection')
+    rclpy.init()
+    node = rclpy.create_node('RGB_detection')
+
+    #
+    pub_end = node.create_publisher(String, "/end_of_detection", 1)
+    pub_detection_time = node.create_publisher(Float64, "/detection_time", 1)
 
     # subscribe to the input topics
-    sub_rgb = message_filters.Subscriber(rgb_image_topic, Image)
-    sub_depth = message_filters.Subscriber(depth_image_topic, Image)
-    sub_camera_info = rospy.Subscriber(camera_info_topic, CameraInfo, camera_info_callback)
-    sub_command = message_filters.Subscriber("/start_detection_command", Bool)
+    sub_rgb = message_filters.Subscriber(node, Image, rgb_image_topic)
+    sub_depth = message_filters.Subscriber(node, Image, depth_image_topic)
+    sub_camera_info = node.create_subscription(CameraInfo, camera_info_topic, camera_info_callback, 1)
+    sub_command = message_filters.Subscriber(node, Bool, "/start_detection_command")
     combined_sub = message_filters.ApproximateTimeSynchronizer([sub_rgb, sub_depth, sub_command], 1, 0.1, allow_headerless=True)
 
     combined_sub.registerCallback(sync_callback)
@@ -191,11 +195,11 @@ def listener():
     for objectClass_id in classesDict:
         objectClass = classesDict[objectClass_id]
         output_topic = output_topic_prefix + objectClass
-        pub = rospy.Publisher(output_topic, PoseStamped, queue_size=1)
+        pub = node.create_publisher(PoseStamped, output_topic, 1)
         pub_dict[objectClass_id] = pub
 
     # spin 
-    rospy.spin()
+    rclpy.spin(node)
 
     
 
