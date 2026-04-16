@@ -2,12 +2,13 @@ from ultralytics import YOLO
 import rclpy
 from cv_bridge import CvBridge, CvBridgeError
 from geometry_msgs.msg import PoseStamped
-from sensor_msgs.msg import Image, CameraInfo
+from sensor_msgs.msg import Image, CameraInfo, CompressedImage
+import cv2
 from std_msgs.msg import Bool, String, Float64
 import numpy as np
-#import tf2_ros
 import tf_transformations
 import message_filters
+import struct
 
 classesDict = dict()
 classesDict[0] = 'BoxNoLid'
@@ -20,8 +21,8 @@ classesDict[0] = 'BoxNoLid'
 #rgb_image_topic = '/head_camera/rgb/image_rect_color'
 #depth_image_topic = '/head_camera/depth/image_raw'
 #camera_info_topic = '/head_camera/depth/camera_info'
-rgb_image_topic = '/rgb/image_raw'
-depth_image_topic = '/depth_to_rgb/image_raw'
+rgb_image_topic = '/rgb/image_raw/compressed'
+depth_image_topic = '/depth_to_rgb/image_raw/compressedDepth'
 camera_info_topic = '/rgb/camera_info'
 
 
@@ -47,20 +48,42 @@ def rgb_callback(data):
 
 def depth_callback(data):
     global depth_data
+    print("tata")
     try:
-        depth_data = bridge.imgmsg_to_cv2(data, "passthrough")
+        depth_data = bridge.compressed_imgmsg_to_cv2(data, "passthrough")
     except CvBridgeError as e:
         print(e)
 
 def sync_callback(rgb_msg, depth_msg, command_msg):
     global rgb_data, depth_data
+    print("toto")
     try:
-        rgb_data = bridge.imgmsg_to_cv2(rgb_msg, "bgr8")
+        rgb_data = bridge.compressed_imgmsg_to_cv2(rgb_msg, "bgr8")
     except CvBridgeError as e:
+        print("titi")
         print(e)
     try:
-        depth_data = bridge.imgmsg_to_cv2(depth_msg, "passthrough")
+        #depth_data = bridge.compressed_imgmsg_to_cv2(depth_msg, "passthrough")
+        # 1. Skip the 12-byte header (documented in codec.cpp)
+        depth_header_size = 12
+        raw_data = depth_msg.data[depth_header_size:]
+        
+        # 2. Decode the raw PNG data
+        depth_img_raw = cv2.imdecode(np.frombuffer(raw_data, np.uint8), cv2.IMREAD_UNCHANGED)
+        
+        if depth_img_raw is None:
+            self.get_logger().error("Failed to decode image")
+            return
+        else:
+            height, width = depth_img_raw.shape
+            print(height)
+            print(width)
+            print(depth_img_raw.dtype)
+
+        depth_data = depth_img_raw
+
     except CvBridgeError as e:
+        print("tutu")
         print(e)
     
     process_images(rgb_msg.header.stamp)
@@ -75,8 +98,9 @@ def camera_info_callback(data):
 
 def process_images(time):
     global rgb_data, depth_data, camera_info, pub_dict, pub_end, node, pub_detection_time
-    
+    print("process_images")
     if rgb_data is not None and depth_data is not None and camera_info:
+        print("if ok")
         #time
         start = node.get_clock().now()
         #inference
@@ -170,6 +194,7 @@ def process_images(time):
             pose.pose.position.y = Y * 0.001
             pose.pose.position.z = Z * 0.001
             
+            #quat = np.array([0.0, 1.0, 0.0, 0.0])
             quat = np.array([0.6129531264305115, 0.6196120977401733, -0.3606013059616089, 0.3321303129196167])
 
             pose.pose.orientation.x = quat[0]
@@ -205,8 +230,10 @@ def listener():
     pub_detection_time = node.create_publisher(Float64, "/detection_time", 1)
 
     # subscribe to the input topics
-    sub_rgb = message_filters.Subscriber(node, Image, rgb_image_topic)
-    sub_depth = message_filters.Subscriber(node, Image, depth_image_topic)
+    #sub_depth_alone = node.create_subscription(CompressedImage, depth_image_topic, depth_callback, 1)
+
+    sub_rgb = message_filters.Subscriber(node, CompressedImage, rgb_image_topic)
+    sub_depth = message_filters.Subscriber(node, CompressedImage, depth_image_topic)
     sub_camera_info = node.create_subscription(CameraInfo, camera_info_topic, camera_info_callback, 1)
     sub_command = message_filters.Subscriber(node, Bool, "/start_detection_command")
     combined_sub = message_filters.ApproximateTimeSynchronizer([sub_rgb, sub_depth, sub_command], 1, 0.1, allow_headerless=True)
