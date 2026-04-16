@@ -10,9 +10,10 @@ import tf_transformations
 import message_filters
 
 classesDict = dict()
-classesDict[0] = 'CupNoodles'
-classesDict[1] = 'CurryCup'
-classesDict[2] = 'SeaFoodCup'
+classesDict[0] = 'BoxNoLid'
+#classesDict[0] = 'CupNoodles'
+#classesDict[1] = 'CurryCup'
+#classesDict[2] = 'SeaFoodCup'
 
 
 ## Fetch head camera
@@ -138,7 +139,7 @@ def process_images(time):
             node.get_logger().info(f'k: fx={fx:.2f} pix, fy={fy:.2f} pix')
             node.get_logger().info(f'k: cx={cx:.2f} pix, cy={cy:.2f} pix')
             node.get_logger().info(f'position: X={X:.2f} mm, Y={Y:.2f} mm, Z={z:.2f} mm')
-            Z = z + 45 #object has 4.5 cm radius
+            Z = z #+ 45 #object has 4.5 cm radius
 
             initial = np.array([0, 0, 1]) #default orientation of the object
             ratio = h / w
@@ -168,7 +169,7 @@ def process_images(time):
             pose.pose.position.x = X * 0.001
             pose.pose.position.y = Y * 0.001
             pose.pose.position.z = Z * 0.001
-
+            quat = np.array([0.0, 1.0, 0.0, 0.0])
             pose.pose.orientation.x = quat[0]
             pose.pose.orientation.y = quat[1]
             pose.pose.orientation.z = quat[2]
