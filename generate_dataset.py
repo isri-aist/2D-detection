@@ -12,8 +12,9 @@ object_classes_dict = dict()
 #object_classes_dict["noodlecup"] = 0
 #object_classes_dict["currycup"] = 1
 #object_classes_dict["seafoodcup"] = 2
-#object_classes_dict["BoxLid"] = 0
-object_classes_dict["BoxNoLid"] = 0
+#object_classes_dict["BoxNoLid"] = 0
+object_classes_dict["BoxLid"] = 0
+object_classes_dict["BoxNoLid"] = 1
 
 background_images_path = "raw_data/background_samples/"
 #get list of all images
