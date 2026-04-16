@@ -12,11 +12,15 @@ This repo allows the detection of targeted objects on a camera stream, in combin
 
 ## Installation
 
-- Tested with Ubuntu 20.04 / ROS Noetic
+- Tested with Ubuntu 22.04 / ROS 2 Humble
 - All required packages are listed in `environment.yaml`. We recommend using a conda virtual environment to install them using the following command:
 
 ```bash
 conda env create -f environment.yaml
+```
+- However, `tf_transformations` for ROS2 in python needs manual system install with:
+```
+sudo apt install ros-<ros_distro>-tf-transformations
 ```
 
 ## Usage
