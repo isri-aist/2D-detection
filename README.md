@@ -61,3 +61,7 @@ python yolov8/command_node.py
 ## References
 
 This detection system was developed by Virgile Foussereau at the CNRS-AIST Joint Robotics Laboratory in collaboration with Guillaume Caron and Iori Kumagai.
+
+If you use this repository, please cite the below paper:
+
+Virgile Foussereau, Iori Kumagai, Guillaume Caron. Towards Retail Stores Automation: 6-DOF Pose Estimation Combining Deep Learning Object Detection and Dense Depth Alignment. IEEE/SICE International Symposium on System Integration, IEEE; SICE, Jan 2024, Ha Long, Vietnam. [PDF](https://hal.science/hal-04306460)
